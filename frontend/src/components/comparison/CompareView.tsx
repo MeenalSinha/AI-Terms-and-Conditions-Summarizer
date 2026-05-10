@@ -17,6 +17,7 @@ export default function CompareView({ onBack }: CompareViewProps) {
   const [docBName, setDocBName] = useState('Document B')
   const [result, setResult] = useState<ComparisonResult | null>(null)
   const [isComparing, setIsComparing] = useState(false)
+  const [modelType, setModelType] = useState('rule_based')
 
   const handleCompare = async () => {
     if (docAText.trim().length < 100 || docBText.trim().length < 100) {
@@ -25,7 +26,7 @@ export default function CompareView({ onBack }: CompareViewProps) {
     }
     setIsComparing(true)
     try {
-      const res = await compareDocuments(docAText, docBText, docAName, docBName)
+      const res = await compareDocuments(docAText, docBText, docAName, docBName, modelType)
       setResult(res)
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || 'Comparison failed. Is the backend running?')
@@ -117,8 +118,28 @@ export default function CompareView({ onBack }: CompareViewProps) {
         ))}
       </div>
 
-      {/* Compare button */}
-      <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+      {/* Model + Compare button row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'center', marginBottom: '24px' }}>
+        <select
+          value={modelType}
+          onChange={(e) => setModelType(e.target.value)}
+          disabled={isComparing}
+          style={{
+            padding: '10px 14px',
+            borderRadius: '8px',
+            border: '1px solid var(--border-default)',
+            backgroundColor: 'var(--bg-surface)',
+            color: 'var(--text-primary)',
+            fontSize: '14px',
+            fontFamily: 'var(--font-geist)',
+            outline: 'none',
+            cursor: isComparing ? 'not-allowed' : 'pointer',
+          }}
+        >
+          <option value="rule_based">Rule-Based (Fast)</option>
+          <option value="mistral">Mistral-7B (Local)</option>
+          <option value="claude">Claude (Cloud)</option>
+        </select>
         <button
           onClick={handleCompare}
           disabled={isComparing}

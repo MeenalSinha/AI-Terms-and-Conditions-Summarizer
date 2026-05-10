@@ -76,8 +76,10 @@ class AnalyzeResponse(BaseModel):
 
 
 class AnalyzeTextRequest(BaseModel):
+    model_config = {"protected_namespaces": ()}
     text: str
     document_name: Optional[str] = "Pasted Document"
+    model_type: Optional[str] = "claude"
 
 
 class ChatMessage(BaseModel):

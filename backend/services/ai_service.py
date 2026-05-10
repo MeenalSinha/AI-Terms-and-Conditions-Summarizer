@@ -17,6 +17,7 @@ from models.schemas import (
     AnalyzedClause, RiskLevel, ClauseCategory,
     DocumentSummary, RiskDistribution
 )
+from services.mistral_service import analyze_with_mistral
 
 logger = logging.getLogger(__name__)
 
@@ -296,14 +297,20 @@ class AIInferenceService:
 
         return clauses[:50]
 
-    async def analyze_clauses(self, text: str) -> List[AnalyzedClause]:
+    async def analyze_clauses(self, text: str, model_type: str = "claude") -> List[AnalyzedClause]:
         """Analyze all clauses in the document."""
         clauses = self.segment_clauses(text)
         logger.info(f"Segmented into {len(clauses)} clauses")
 
         # Try AI-powered analysis first
         ai_results = []
-        if ANTHROPIC_API_KEY:
+        if model_type == "mistral":
+            try:
+                ai_results = await analyze_with_mistral(clauses, text)
+                logger.info(f"Got {len(ai_results)} results from Mistral local model")
+            except Exception as e:
+                logger.warning(f"Mistral analysis failed, using rule-based: {e}")
+        elif model_type == "claude" and ANTHROPIC_API_KEY:
             try:
                 ai_results = await analyze_with_claude(clauses, text)
                 logger.info(f"Got {len(ai_results)} results from Claude API")
@@ -319,10 +326,21 @@ class AIInferenceService:
                 try:
                     risk_level = RiskLevel(ai.get("risk_level", "Low"))
                     category = ClauseCategory(ai.get("category", "User Rights"))
-                    risk_score = int(ai.get("risk_score", 20))
+                    
+                    if "risk_score" in ai:
+                        risk_score = int(ai["risk_score"])
+                    else:
+                        risk_score_map = {RiskLevel.LOW: 20, RiskLevel.MEDIUM: 50, RiskLevel.HIGH: 80, RiskLevel.CRITICAL: 95}
+                        risk_score = risk_score_map.get(risk_level, 20)
+                        
                     user_impact = ai.get("user_impact", "")
                     explanation = ai.get("explanation", "")
-                    red_flags = ai.get("red_flags", [])
+                    
+                    if "red_flags" in ai:
+                        red_flags = ai["red_flags"]
+                    else:
+                        red_flags = extract_red_flags(clause_text)
+                        
                     confidence = float(ai.get("confidence", 0.85))
                 except (ValueError, TypeError):
                     risk_level, risk_score, red_flags = assess_risk_rule_based(clause_text)

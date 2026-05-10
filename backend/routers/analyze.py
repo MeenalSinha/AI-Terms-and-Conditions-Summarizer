@@ -24,7 +24,8 @@ document_cache: dict = {}
 async def analyze_document(
     file: Optional[UploadFile] = File(None),
     text: Optional[str] = Form(None),
-    document_name: Optional[str] = Form("Document")
+    document_name: Optional[str] = Form("Document"),
+    model_type: Optional[str] = Form("claude")
 ):
     """
     Analyze a Terms & Conditions document.
@@ -61,8 +62,8 @@ async def analyze_document(
         doc_id = str(uuid.uuid4())
 
         # Run AI analysis
-        logger.info(f"Starting analysis for document: {document_name}")
-        clauses = await inference_service.analyze_clauses(cleaned_text)
+        logger.info(f"Starting analysis for document: {document_name} using {model_type}")
+        clauses = await inference_service.analyze_clauses(cleaned_text, model_type)
 
         # Compute metrics
         dist = inference_service.compute_risk_distribution(clauses)
@@ -108,7 +109,7 @@ async def analyze_text(request: AnalyzeTextRequest):
         raise HTTPException(422, validation_error)
 
     doc_id = str(uuid.uuid4())
-    clauses = await inference_service.analyze_clauses(cleaned_text)
+    clauses = await inference_service.analyze_clauses(cleaned_text, request.model_type)
     dist = inference_service.compute_risk_distribution(clauses)
     overall_score = inference_service.compute_overall_score(clauses)
     summary = inference_service.generate_summary(clauses, cleaned_text)

@@ -48,6 +48,7 @@ export default function UploadSection({ onAnalysisComplete }: UploadSectionProps
   const [progress, setProgress] = useState(0)
   const [progressLabel, setProgressLabel] = useState('')
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [modelType, setModelType] = useState('claude')
 
   const simulateProgress = async (onDone: () => void) => {
     const steps = [
@@ -88,8 +89,8 @@ export default function UploadSection({ onAnalysisComplete }: UploadSectionProps
 
     try {
       const analysisPromise = mode === 'upload' && uploadedFile
-        ? analyzeFile(uploadedFile, setProgress)
-        : analyzeText(pastedText)
+        ? analyzeFile(uploadedFile, modelType, setProgress)
+        : analyzeText(pastedText, modelType)
 
       const [res] = await Promise.all([analysisPromise, progressDone])
       result = res
@@ -362,6 +363,35 @@ export default function UploadSection({ onAnalysisComplete }: UploadSectionProps
             </div>
           </div>
         )}
+
+        {/* Model Selection */}
+        <div style={{ marginTop: '20px', marginBottom: '10px' }}>
+          <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>
+            Select AI Model
+          </label>
+          <select
+            value={modelType}
+            onChange={(e) => setModelType(e.target.value)}
+            disabled={isAnalyzing}
+            style={{
+              width: '100%',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              border: '1px solid var(--border-default)',
+              backgroundColor: 'var(--bg-surface)',
+              color: 'var(--text-primary)',
+              fontSize: '14px',
+              fontFamily: 'var(--font-geist)',
+              outline: 'none',
+              cursor: isAnalyzing ? 'not-allowed' : 'pointer',
+              appearance: 'none',
+            }}
+          >
+            <option value="claude">Anthropic Claude (Cloud)</option>
+            <option value="mistral">Mistral-7B (Local Privacy)</option>
+            <option value="rule_based">Rule-Based (Fast Offline)</option>
+          </select>
+        </div>
 
         {/* Analyze button */}
         <button

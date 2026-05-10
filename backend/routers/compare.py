@@ -7,20 +7,26 @@ from fastapi import APIRouter, HTTPException
 from models.schemas import CompareRequest, ComparisonResult
 from services.ai_service import inference_service
 from services.document_service import clean_text
+from pydantic import BaseModel
+from typing import Optional
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+class CompareRequestExt(CompareRequest):
+    model_type: Optional[str] = "rule_based"
+
+
 @router.post("/compare", response_model=ComparisonResult)
-async def compare_documents(request: CompareRequest):
+async def compare_documents(request: CompareRequestExt):
     """Compare two T&C documents and determine which is safer."""
     try:
         text_a = clean_text(request.document_a_text)
         text_b = clean_text(request.document_b_text)
 
-        clauses_a = await inference_service.analyze_clauses(text_a)
-        clauses_b = await inference_service.analyze_clauses(text_b)
+        clauses_a = await inference_service.analyze_clauses(text_a, request.model_type)
+        clauses_b = await inference_service.analyze_clauses(text_b, request.model_type)
 
         score_a = inference_service.compute_overall_score(clauses_a)
         score_b = inference_service.compute_overall_score(clauses_b)
