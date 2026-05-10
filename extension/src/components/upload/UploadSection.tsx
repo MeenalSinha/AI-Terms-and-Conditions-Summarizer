@@ -43,6 +43,7 @@ interface UploadSectionProps {
 
 export default function UploadSection({ onAnalysisComplete }: UploadSectionProps) {
   const [mode, setMode] = useState<'upload' | 'paste'>('upload')
+  const [modelType, setModelType] = useState('mistral')
   const [pastedText, setPastedText] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -88,8 +89,8 @@ export default function UploadSection({ onAnalysisComplete }: UploadSectionProps
 
     try {
       const analysisPromise = mode === 'upload' && uploadedFile
-        ? analyzeFile(uploadedFile, setProgress)
-        : analyzeText(pastedText)
+        ? analyzeFile(uploadedFile, modelType, setProgress)
+        : analyzeText(pastedText, 'Pasted Document', modelType)
 
       const [res] = await Promise.all([analysisPromise, progressDone])
       result = res
@@ -240,6 +241,35 @@ export default function UploadSection({ onAnalysisComplete }: UploadSectionProps
               {m === 'upload' ? 'Upload File' : 'Paste Text'}
             </button>
           ))}
+        </div>
+
+        {/* Model Selection */}
+        <div style={{ marginBottom: '24px' }}>
+          <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>
+            Select AI Inference Engine
+          </label>
+          <select
+            value={modelType}
+            onChange={(e) => setModelType(e.target.value)}
+            disabled={isAnalyzing}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              borderRadius: '10px',
+              border: '1px solid var(--border-default)',
+              backgroundColor: 'var(--bg-subtle)',
+              color: 'var(--text-primary)',
+              fontSize: '14px',
+              fontFamily: 'var(--font-geist)',
+              cursor: isAnalyzing ? 'not-allowed' : 'pointer',
+              outline: 'none',
+              transition: 'all 0.2s'
+            }}
+          >
+            <option value="mistral">Mistral-7B QLoRA (Local Privacy)</option>
+            <option value="claude">Gemini 3.1 Pro (Cloud Performance)</option>
+            <option value="rule_based">Rule-Based Regex (Offline Fallback)</option>
+          </select>
         </div>
 
         {/* Upload zone */}

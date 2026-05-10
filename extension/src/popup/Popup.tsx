@@ -7,6 +7,7 @@ export default function Popup() {
   const [isScanning, setIsScanning] = useState(false)
   const [quickResult, setQuickResult] = useState<AnalyzeResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [modelType, setModelType] = useState('mistral')
 
   const scanCurrentPage = async () => {
     setIsScanning(true)
@@ -27,7 +28,7 @@ export default function Popup() {
       }
 
       // Analyze the extracted text
-      const result = await analyzeText(response.text, tab.title || 'Current Page')
+      const result = await analyzeText(response.text, tab.title || 'Current Page', modelType)
       setQuickResult(result)
 
       // Save to chrome.storage for side panel access
@@ -110,6 +111,34 @@ export default function Popup() {
 
       {/* Content */}
       <div style={{ padding: '16px 20px' }}>
+        {/* Model Selection */}
+        <div style={{ marginBottom: '12px' }}>
+          <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '6px' }}>
+            Inference Engine
+          </label>
+          <select 
+            value={modelType}
+            onChange={(e) => setModelType(e.target.value)}
+            disabled={isScanning}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              border: '1px solid var(--border-default)',
+              backgroundColor: 'var(--bg-surface)',
+              color: 'var(--text-primary)',
+              fontSize: '13px',
+              fontFamily: 'var(--font-geist)',
+              cursor: isScanning ? 'not-allowed' : 'pointer',
+              outline: 'none',
+            }}
+          >
+            <option value="mistral">Mistral-7B (Local Privacy)</option>
+            <option value="claude">Gemini (Cloud Fast)</option>
+            <option value="rule_based">Rule-Based (Offline)</option>
+          </select>
+        </div>
+
         {/* Scan button */}
         <button
           onClick={scanCurrentPage}

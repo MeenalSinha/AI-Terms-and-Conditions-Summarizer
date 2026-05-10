@@ -15,6 +15,7 @@ export default function CompareView({ onBack }: CompareViewProps) {
   const [docBText, setDocBText] = useState('')
   const [docAName, setDocAName] = useState('Document A')
   const [docBName, setDocBName] = useState('Document B')
+  const [modelType, setModelType] = useState('mistral')
   const [result, setResult] = useState<ComparisonResult | null>(null)
   const [isComparing, setIsComparing] = useState(false)
 
@@ -25,7 +26,7 @@ export default function CompareView({ onBack }: CompareViewProps) {
     }
     setIsComparing(true)
     try {
-      const res = await compareDocuments(docAText, docBText, docAName, docBName)
+      const res = await compareDocuments(docAText, docBText, docAName, docBName, modelType)
       setResult(res)
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || 'Comparison failed. Is the backend running?')
@@ -67,6 +68,34 @@ export default function CompareView({ onBack }: CompareViewProps) {
       </div>
 
       {/* Input area */}
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>
+          Select AI Inference Engine
+        </label>
+        <select
+          value={modelType}
+          onChange={(e) => setModelType(e.target.value)}
+          disabled={isComparing}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            borderRadius: '10px',
+            border: '1px solid var(--border-default)',
+            backgroundColor: 'var(--bg-subtle)',
+            color: 'var(--text-primary)',
+            fontSize: '14px',
+            fontFamily: 'var(--font-geist)',
+            cursor: isComparing ? 'not-allowed' : 'pointer',
+            outline: 'none',
+            transition: 'all 0.2s'
+          }}
+        >
+          <option value="mistral">Mistral-7B QLoRA (Local Privacy)</option>
+          <option value="claude">Gemini 3.1 Pro (Cloud Performance)</option>
+          <option value="rule_based">Rule-Based Regex (Offline Fallback)</option>
+        </select>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
         {[
           { label: docAName, setLabel: setDocAName, text: docAText, setText: setDocAText, placeholder: 'Paste Document A (Terms & Conditions)...' },
