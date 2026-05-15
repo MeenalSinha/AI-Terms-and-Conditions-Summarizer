@@ -54,7 +54,9 @@ LegalCopilot is now available as a fully functional Chrome Extension (Manifest V
 | HTTP client (frontend) | Axios |
 | File upload | react-dropzone |
 | Backend | FastAPI, Python 3.10+, Uvicorn |
-| AI Engine | Anthropic Claude (`claude-sonnet-4-20250514`) with rule-based fallback |
+| AI Engine (Primary) | Fine-tuned Mistral-7B with QLoRA (LoRA adapter) |
+| AI Engine (Fallback) | Anthropic Claude (`claude-sonnet-4-20250514`) |
+| AI Engine (Last Resort) | Rule-based keyword engine |
 | PDF parsing | pdfplumber (primary), PyPDF2 (fallback) |
 | Data validation | Pydantic v2 |
 
@@ -62,12 +64,39 @@ LegalCopilot is now available as a fully functional Chrome Extension (Manifest V
 
 ## AI Model
 
+### Fine-Tuned Mistral-7B (Primary Engine)
+
+LegalCopilot uses a **custom fine-tuned Mistral-7B model** trained specifically on Terms of Service and Privacy Policy data from the **ToS;DR dataset** (Zenodo). This model was trained using **QLoRA (Quantized Low-Rank Adaptation)** — a parameter-efficient fine-tuning technique that allows training a 7-billion parameter model on a single GPU.
 LegalCopilot uses a **two-tier inference strategy** so the app remains functional with or without an API key:
+
+### Dataset
+
+The model was trained on the **[ToS;DR dataset from Zenodo](https://zenodo.org/records/7989152)** — a community-curated collection of annotated Terms of Service clauses from real companies.
+
+| File | Description |
+|---|---|
+| `points.csv` | Annotated clauses with approval status |
+| `cases.csv` | Legal case scenarios |
+| `topics.csv` | Legal topic taxonomy (28 categories) |
+| `services.csv` | Company/service metadata |
+
+The raw dataset labels (`approved`, `declined`) were mapped to risk levels:
+
+| Original Label | Risk Level |
+|---|---|
+| `approved` | Low |
+| `declined` | High |
+
+
+### Three-Tier Inference Strategy
+
+LegalCopilot uses a **three-tier fallback system** so the app remains functional under any conditions:
 
 | Tier | Engine | When Used |
 |---|---|---|
-| **Primary** | Anthropic Claude `claude-sonnet-4-20250514` | When `ANTHROPIC_API_KEY` is set and the API is reachable |
-| **Fallback** | Rule-based keyword engine | API unavailable, rate-limited, or key not configured |
+| **Tier 1 (Primary)** | Fine-tuned Mistral-7B (LoRA adapter) | When GPU is available and adapter is loaded |
+| **Tier 2 (Secondary)** | Anthropic Claude `claude-sonnet-4-20250514` | When Mistral unavailable, `ANTHROPIC_API_KEY` is set |
+| **Tier 3 (Fallback)** | Rule-based keyword engine | API unavailable or key not configured |
 
 The rule-based fallback covers 50+ curated risk keywords across four severity levels and 15 legal clause categories. Clauses analysed via fallback return a lower `confidence` score (0.72 vs 0.85+) so the frontend can surface the distinction if needed.
 
@@ -78,6 +107,7 @@ The rule-based fallback covers 50+ curated risk keywords across four severity le
 - **Node.js** 18+ and npm
 - **Python** 3.10+
 - An **Anthropic API key** (optional — the app runs with rule-based analysis without it)
+- **NVIDIA GPU with 5GB+ VRAM** (optional — required only for local Mistral inference)
 
 ---
 
@@ -129,7 +159,12 @@ npm run dev
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `ANTHROPIC_API_KEY` | No | `""` | Enables AI-powered clause analysis and chat |
+| `ANTHROPIC_API_KEY` | No | `""` | Enables Claude AI analysis and chat (Tier 2) |
+| `USE_MISTRAL` | No | `false` | Set `true` to enable local Mistral inference (requires GPU) |
+| `MISTRAL_MODEL_PATH` | No | `mistralai/Mistral-7B-Instruct-v0.1` | Base model path or HuggingFace ID |
+| `MISTRAL_USE_4BIT` | No | `false` | Enable 4-bit quantization (requires bitsandbytes + NVIDIA GPU) |
+| `MISTRAL_MAX_NEW_TOKENS` | No | `256` | Max tokens to generate per clause |
+| `HF_TOKEN` | No | `""` | HuggingFace token for downloading gated models |
 | `HOST` | No | `0.0.0.0` | Uvicorn bind address |
 | `PORT` | No | `8000` | Uvicorn port |
 | `RELOAD` | No | `true` | Hot-reload on file changes |
@@ -142,6 +177,7 @@ npm run dev
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8000/api` | Backend base URL |
 
 ---
+
 
 ## API Reference
 
@@ -159,16 +195,15 @@ Full interactive docs are available at `http://localhost:8000/api/docs` when the
 | `POST` | `/api/export` | Export report as JSON or plain text |
 
 ---
-
 ## How Analysis Works
 
-1. **Ingestion** — Text is extracted from the uploaded file (PDF via pdfplumber/PyPDF2, plain text directly),
- #**or can be now scraped directly from a live webpage via the Chrome Extension**(new), and then cleaned (whitespace normalization, page-number stripping).
+1. **Ingestion** — Text is extracted from the uploaded file (PDF via pdfplumber/PyPDF2, plain text directly) and cleaned (whitespace normalization, page-number stripping).
 2. **Segmentation** — The document is split into clauses using numbered-section patterns, paragraph breaks, or sentence chunking as fallbacks.
-3. **AI Analysis** — Up to 20 clauses are sent to Claude in one batch with a structured prompt requesting category, risk level, risk score, plain-English impact, explanation, and red flags.
-4. **Rule-based Fallback** — If the Claude API is unavailable or returns no result for a clause, keyword matching against curated risk dictionaries assigns category and risk level.
-5. **Scoring** — An overall score is computed as a weighted average of individual clause scores, with Critical clauses weighted 4× and Low clauses weighted 1×.
-6. **Caching** — Completed analyses are stored in an in-memory dict keyed by UUID, enabling the Chat and Export features to reference the same document without re-analysis.
+3. **AI Analysis (Tier 1)** — If a GPU and fine-tuned Mistral adapter are available, clauses are analyzed by the custom model trained on ToS;DR data.
+4. **AI Analysis (Tier 2)** — If Mistral is unavailable, up to 20 clauses are sent to Claude in one batch with a structured prompt requesting category, risk level, risk score, plain-English impact, explanation, and red flags.
+5. **Rule-based Fallback (Tier 3)** — If both AI tiers are unavailable, keyword matching against curated risk dictionaries assigns category and risk level.
+6. **Scoring** — An overall score is computed as a weighted average of individual clause scores, with Critical clauses weighted 4× and Low clauses weighted 1×.
+7. **Caching** — Completed analyses are stored in an in-memory dict keyed by UUID, enabling the Chat and Export features to reference the same document without re-analysis.
 
 ---
 
@@ -193,18 +228,28 @@ legalcopilot/
 │   ├── main.py                  # FastAPI app, middleware, router registration
 │   ├── requirements.txt
 │   ├── .env.example
+│   ├── Dockerfile
 │   ├── models/
-│   │   └── schemas.py           # Pydantic request/response models
+│   │   ├── schemas.py           # Pydantic request/response models
+│   │   └── legalcopilot-mistral-tosdr/  # Fine-tuned LoRA adapter (place files here)
+│   │       ├── adapter_config.json
+│   │       ├── adapter_model.safetensors
+│   │       └── tokenizer files
 │   ├── routers/
 │   │   ├── analyze.py           # Document ingestion & analysis endpoints
 │   │   ├── chat.py              # Conversational Q&A endpoint
 │   │   ├── compare.py           # Side-by-side document comparison
 │   │   ├── export.py            # Report download (JSON / TXT)
-│   │   └── health.py            # Health check
+│   │   ├── scan.py              # URL scanner
+│   │   └── health.py            # Health check + model status
 │   ├── services/
-│   │   ├── ai_service.py        # Claude API calls + rule-based fallback
+│   │   ├── ai_service.py        # Tier orchestration (Mistral → Claude → rules)
+│   │   ├── mistral_service.py   # Mistral-7B inference + LoRA adapter loading
 │   │   └── document_service.py  # PDF extraction, text cleaning, validation
 │   └── utils/
+│       ├── rate_limit.py        # SlowAPI rate limiter
+│       ├── http_client.py       # Async HTTP utilities
+│       └── logging_config.py    # Structured logging setup
 |
 ├── frontend/
 │   ├── package.json
