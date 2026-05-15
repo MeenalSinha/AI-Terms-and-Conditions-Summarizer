@@ -22,14 +22,32 @@
 - **Document Comparison** — Paste two T&C documents side-by-side and get a category-by-category breakdown of which is safer.
 - **Export** — Download the full analysis as a JSON data file or a human-readable `.txt` report.
 - **Graceful Degradation** — Every AI call has a deterministic rule-based fallback, so the app works even without an Anthropic API key.
-
+- **Chrome Extension**(new) - Now available as a chrome extension with Auto-extraction of T&C from webpage, so users can scan the page in just One-tap.
+- **Sidebar**(new) - Also added alongside the extension, User can now veiw the risk score directly on a compact sidebar and then go to a new browser tab for full details.
 ---
+## 🧩 Chrome Extension 
+[cite_start]LegalCopilot is now available as a fully functional Chrome Extension (Manifest V3), allowing users to analyze Terms & Conditions directly from the browser without navigating to a separate site. [cite: 4, 5]
 
+### Extension Features
+* [cite_start]**Quick Scan Popup:** Instantly scan the current webpage for legal risks and view a quick score by clicking the extension icon. [cite: 24, 229]
+* [cite_start]**Risk Summary Side Panel:** A persistent side panel to view detailed risk distributions, key risks, and verdicts while you browse. [cite: 25, 229]
+* [cite_start]**Smart Auto-Detection:** A background content script automatically detects if you navigate to a T&C or Privacy Policy page and offers to extract and analyze the text. [cite: 33, 286]
+* [cite_start]**Full Dashboard:** Access the complete suite of tools—including clause comparison, AI chat, and export features—in a dedicated new tab. [cite: 271, 283]
+
+### Extension Local Installation Instructions
+1. [cite_start]Navigate to the extension directory: `cd extension` [cite: 198]
+2. Install the necessary dependencies: `npm install`
+3. [cite_start]Build the extension package: `npm run build` [cite: 199]
+4. [cite_start]Open Google Chrome and navigate to `chrome://extensions/` [cite: 204, 263]
+5. [cite_start]Toggle **Developer mode** ON in the top right corner. [cite: 205, 264]
+6. [cite_start]Click **Load unpacked** and select the `Legal-Copilot/extension/dist` directory. [cite: 206, 266]
+---
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
 | Frontend | Next.js 14, React 18, TypeScript, Tailwind CSS |
+| Chrome Extension (new) | Manifest V3, Vite, CRXJS, Service Workers, Chrome Storage API |
 | Charts | Recharts |
 | Animations | Framer Motion |
 | HTTP client (frontend) | Axios |
@@ -127,6 +145,7 @@ npm run dev
 ## API Reference
 
 Full interactive docs are available at `http://localhost:8000/api/docs` when the backend is running.
+(**Note: Both the Next.js web application and the Chrome Extension communicate with this same set of REST API endpoints.**)
 
 | Method | Endpoint | Description |
 |---|---|---|
@@ -142,7 +161,8 @@ Full interactive docs are available at `http://localhost:8000/api/docs` when the
 
 ## How Analysis Works
 
-1. **Ingestion** — Text is extracted from the uploaded file (PDF via pdfplumber/PyPDF2, plain text directly) and cleaned (whitespace normalization, page-number stripping).
+1. **Ingestion** — Text is extracted from the uploaded file (PDF via pdfplumber/PyPDF2, plain text directly),
+ #**or can be now scraped directly from a live webpage via the Chrome Extension**(new), and then cleaned (whitespace normalization, page-number stripping).
 2. **Segmentation** — The document is split into clauses using numbered-section patterns, paragraph breaks, or sentence chunking as fallbacks.
 3. **AI Analysis** — Up to 20 clauses are sent to Claude in one batch with a structured prompt requesting category, risk level, risk score, plain-English impact, explanation, and red flags.
 4. **Rule-based Fallback** — If the Claude API is unavailable or returns no result for a clause, keyword matching against curated risk dictionaries assigns category and risk level.
@@ -164,6 +184,9 @@ Maximum document size: **500,000 characters**.
 ## Project Structure
 
 ```
+## Project Structure
+
+```text
 legalcopilot/
 ├── backend/
 │   ├── main.py                  # FastAPI app, middleware, router registration
@@ -181,6 +204,7 @@ legalcopilot/
 │   │   ├── ai_service.py        # Claude API calls + rule-based fallback
 │   │   └── document_service.py  # PDF extraction, text cleaning, validation
 │   └── utils/
+|
 ├── frontend/
 │   ├── package.json
 │   ├── next.config.js
@@ -202,6 +226,37 @@ legalcopilot/
 │       │   └── api.ts           # Typed Axios wrappers for all endpoints
 │       └── types/
 │           └── index.ts         # Shared TypeScript interfaces and enums
+|
+├── extension/                   # NEW: Chrome Extension (Manifest V3)
+│   ├── manifest.json            # Extension configuration and permissions
+│   ├── package.json
+│   ├── vite.config.ts           # Vite + CRXJS bundler configuration
+│   ├── tailwind.config.js
+│   ├── postcss.config.js
+│   ├── public/
+│   │   ├── icons/               # Extension icons (16, 32, 48, 128px)
+│   │   └── fonts/               # Self-hosted fonts for CSP compliance
+│   └── src/
+│       ├── popup/               # Quick-action UI (Scan current page)
+│       │   ├── index.html
+│       │   ├── Popup.tsx
+│       │   └── main.tsx
+│       ├── sidepanel/           # Persistent risk summary dashboard
+│       │   ├── index.html
+│       │   ├── SidePanel.tsx
+│       │   └── main.tsx
+│       ├── newtab/              # Full dashboard experience (New Tab)
+│       │   └── FullDashboard.tsx
+│       ├── background/
+│       │   └── service-worker.ts # Extension lifecycle, state, & message routing
+│       ├── content/
+│       │   └── content-script.ts # Auto-detects T&C pages & extracts page text
+│       ├── components/          # Reused React components (copied from frontend)
+│       ├── lib/
+│       │   └── api.ts           # Adapted API calls (import.meta.env.VITE_API_URL)
+│       ├── types/               # Copied TypeScript interfaces
+│       └── styles/
+│           └── globals.css      # Adapted CSS (self-hosted fonts, no @import)
 ├── setup.sh
 ├── setup.bat
 └── README.md
