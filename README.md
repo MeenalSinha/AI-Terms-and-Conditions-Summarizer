@@ -25,22 +25,23 @@
 - **Chrome Extension**(new) - Now available as a chrome extension with Auto-extraction of T&C from webpage, so users can scan the page in just One-tap.
 - **Sidebar**(new) - Also added alongside the extension, User can now veiw the risk score directly on a compact sidebar and then go to a new browser tab for full details.
 ---
-## 🧩 Chrome Extension 
-[cite_start]LegalCopilot is now available as a fully functional Chrome Extension (Manifest V3), allowing users to analyze Terms & Conditions directly from the browser without navigating to a separate site. [cite: 4, 5]
+## 🧩 Chrome Extension
+LegalCopilot is now available as a fully functional Chrome Extension (Manifest V3), allowing users to analyze Terms & Conditions directly from the browser without navigating to a separate site.
 
 ### Extension Features
-* [cite_start]**Quick Scan Popup:** Instantly scan the current webpage for legal risks and view a quick score by clicking the extension icon. [cite: 24, 229]
-* [cite_start]**Risk Summary Side Panel:** A persistent side panel to view detailed risk distributions, key risks, and verdicts while you browse. [cite: 25, 229]
-* [cite_start]**Smart Auto-Detection:** A background content script automatically detects if you navigate to a T&C or Privacy Policy page and offers to extract and analyze the text. [cite: 33, 286]
-* [cite_start]**Full Dashboard:** Access the complete suite of tools—including clause comparison, AI chat, and export features—in a dedicated new tab. [cite: 271, 283]
+* **Quick Scan Popup:** Instantly scan the current webpage for legal risks and view a quick score by clicking the extension icon.
+* **Risk Summary Side Panel:** A persistent side panel to view detailed risk distributions, key risks, and verdicts while you browse.
+* **Smart Auto-Detection:** A background content script automatically detects if you navigate to a T&C or Privacy Policy page and offers to extract and analyze the text.
+* **Full Dashboard:** Access the complete suite of tools—including clause comparison, AI chat, and export features—in a dedicated new tab.
 
 ### Extension Local Installation Instructions
-1. [cite_start]Navigate to the extension directory: `cd extension` [cite: 198]
+1. Navigate to the extension directory: `cd extension`
 2. Install the necessary dependencies: `npm install`
-3. [cite_start]Build the extension package: `npm run build` [cite: 199]
-4. [cite_start]Open Google Chrome and navigate to `chrome://extensions/` [cite: 204, 263]
-5. [cite_start]Toggle **Developer mode** ON in the top right corner. [cite: 205, 264]
-6. [cite_start]Click **Load unpacked** and select the `Legal-Copilot/extension/dist` directory. [cite: 206, 266]
+3. Build the extension package: `npm run build`
+4. Open Google Chrome and navigate to `chrome://extensions/`
+5. Toggle **Developer mode** ON in the top right corner.
+6. Click **Load unpacked** and select the `Legal-Copilot/extension/dist` directory.
+
 ---
 ## Tech Stack
 
